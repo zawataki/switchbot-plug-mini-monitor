@@ -1,6 +1,7 @@
 import {scheduler} from 'node:timers/promises';
 import dotenv from 'dotenv';
-import {getDeviceStatus} from './switchbot-api-client.js';
+import {getDeviceStatus, executeManualScene} from './switchbot-api-client.js';
+import got from 'got';
 
 dotenv.config();
 
@@ -9,9 +10,22 @@ async function notifyLaundryEnd() {
 }
 
 async function notifyApiError() {
-  await executeManualScene(process.env.SCENE_ID_API_ERROR_NOTIFICATION);
+  // Post a message to Slack because SwitchBot API may be down
+  try {
+    await got.post("https://hooks.slack.com/services/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", {
+      json: {
+        text: 'SwitchBot API error occurred'
+      }
+    });
+  } catch (error) {
+    const errMessage = "Failed to call notify API error.";
+    console.error(errMessage, error);
+    throw errMessage;
+  }
 }
 
+// Monitor a SwitchBot plug mini connected to a washing machine and
+// notify the laundry end
 (async () => {
   try {
     const deviceIdOfWashingMachine = process.env.TARGET_DEVICE_ID;
@@ -19,9 +33,8 @@ async function notifyApiError() {
     console.log(`timestamp,deviceId,deviceType,hubDeviceId,power,voltage,weight,electricityOfDay,electricCurrent`);
     let lastApiCallTimeMsec = 0;
     let apiErrorCount = 0;
-    let electricCurrentZeroCount = 0;
     let alreadyNotifiedApiError = false;
-    let washingMachineIsRunning = false;
+    let electricCurrentHistory = [];
     while (true) {
       const elapsedTimeMsec = Date.now() - lastApiCallTimeMsec;
       if (elapsedTimeMsec < statusCheckIntervalMsec) {
@@ -32,21 +45,17 @@ async function notifyApiError() {
         const response = await getDeviceStatus(deviceIdOfWashingMachine);
         console.log(`${new Date().toISOString()},${response.deviceId},${response.deviceType},${response.hubDeviceId},${response.power},${response.voltage},${response.weight},${response.electricityOfDay},${response.electricCurrent}`);
 
-        if (response.electricCurrent === 0) {
-          if (!washingMachineIsRunning) {
-            // TODO: Call notifyLaundryEnd() only when washing machine ends
-          }
+        electricCurrentHistory.push(response.electricCurrent);
+        if (electricCurrentHistory.length > 3) {
+          electricCurrentHistory.shift();
+        }
 
-          console.debug(`electricCurrent is 0`);
-          electricCurrentZeroCount++;
+        if (electricCurrentHistory.length == 3
+          && electricCurrentHistory[0] != 0
+          && electricCurrentHistory[1] == 0
+          && electricCurrentHistory[2] == 0) {
 
-          if (electricCurrentZeroCount >= 4) {
-            await notifyLaundryEnd();
-            electricCurrentZeroCount = 0;
-          }
-        } else {
-          washingMachineIsRunning = true;
-          electricCurrentZeroCount = 0;
+          await notifyLaundryEnd();
         }
 
         apiErrorCount = 0;
