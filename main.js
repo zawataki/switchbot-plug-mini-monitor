@@ -2,6 +2,17 @@ import {scheduler} from 'node:timers/promises';
 import dotenv from 'dotenv';
 import {getDeviceStatus, executeManualScene} from './switchbot-api-client.js';
 import got from 'got';
+import pino from 'pino';
+
+const logger = pino({
+  level: process.env.LOG_LEVEL || 'info',
+  formatters: {
+    level: (label) => {
+      return {level: label.toUpperCase()};
+    },
+  },
+  timestamp: pino.stdTimeFunctions.isoTime,
+});
 
 dotenv.config();
 
@@ -18,9 +29,7 @@ async function notifyApiError() {
       }
     });
   } catch (error) {
-    const errMessage = "Failed to call notify API error.";
-    console.error(errMessage, error);
-    throw errMessage;
+    throw new Error("Failed to notify SwitchBot API error", {cause: error});
   }
 }
 
@@ -30,7 +39,6 @@ async function notifyApiError() {
   try {
     const deviceIdOfWashingMachine = process.env.TARGET_DEVICE_ID;
     const statusCheckIntervalMsec = 30 * 1000;
-    console.log(`timestamp,deviceId,deviceType,hubDeviceId,power,voltage,weight,electricityOfDay,electricCurrent`);
     let lastApiCallTimeMsec = 0;
     let apiErrorCount = 0;
     let alreadyNotifiedApiError = false;
@@ -43,7 +51,8 @@ async function notifyApiError() {
       lastApiCallTimeMsec = Date.now();
       try {
         const response = await getDeviceStatus(deviceIdOfWashingMachine);
-        console.log(`${new Date().toISOString()},${response.deviceId},${response.deviceType},${response.hubDeviceId},${response.power},${response.voltage},${response.weight},${response.electricityOfDay},${response.electricCurrent}`);
+        // logger.info(`deviceId=${response.deviceId}, deviceType=${response.deviceType}, hubDeviceId=${response.hubDeviceId}, power=${response.power}, voltage=${response.voltage}, weight=${response.weight}, electricityOfDay=${response.electricityOfDay}, electricCurrent=${response.electricCurrent}`);
+        logger.info(`deviceId=${response.deviceId}, deviceType=${response.deviceType}, electricCurrent=${response.electricCurrent}`);
 
         electricCurrentHistory.push(response.electricCurrent);
         if (electricCurrentHistory.length > 3) {
@@ -61,7 +70,7 @@ async function notifyApiError() {
         apiErrorCount = 0;
         alreadyNotifiedApiError = false;
       } catch (error) {
-        console.error(error.message);
+        logger.error(error);
 
         apiErrorCount++;
         if (apiErrorCount >= 3 && !alreadyNotifiedApiError) {
@@ -75,7 +84,7 @@ async function notifyApiError() {
       }
     }
   } catch (error) {
-    console.error(error);
+    logger.error("This script finishes due to error", error);
     process.exit(1);
   }
 })();

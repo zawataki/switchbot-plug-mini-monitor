@@ -25,9 +25,7 @@ export async function getDeviceList() {
     const response = await got.get(`${API_URL}/devices`, API_OPTIONS).json();
     return response.body;
   } catch (error) {
-    const errMessage = "Failed to get device list.";
-    console.error(errMessage, error);
-    throw errMessage;
+    throw new Error("Failed to get device list", {cause: error});
   }
 }
 
@@ -36,9 +34,7 @@ export async function getDeviceStatus(deviceId) {
     const response = await got.get(`${API_URL}/devices/${deviceId}/status`, API_OPTIONS).json();
     return response.body;
   } catch (error) {
-    const errMessage = "Failed to get device status.";
-    console.error(errMessage, error);
-    throw errMessage;
+    throw new Error("Failed to get device status", {cause: error});
   }
 }
 
@@ -47,9 +43,7 @@ export async function getScenes() {
     const response = await got.get(`${API_URL}/scenes`, API_OPTIONS).json();
     return response.body;
   } catch (error) {
-    const errMessage = "Failed to get scenes.";
-    console.error(errMessage, error);
-    throw errMessage;
+    throw new Error("Failed to get scenes", {cause: error});
   }
 }
 
@@ -58,8 +52,6 @@ export async function executeManualScene(sceneId) {
     const response = await got.post(`${API_URL}/scenes/${sceneId}/execute`, API_OPTIONS).json();
     return response.body;
   } catch (error) {
-    const errMessage = "Failed to execute manual scene.";
-    console.error(errMessage, error);
-    throw errMessage;
+    throw new Error("Failed to execute manual scene", {cause: error});
   }
 }

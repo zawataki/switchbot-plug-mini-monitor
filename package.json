@@ -1,7 +1,8 @@
 {
   "dependencies": {
     "dotenv": "^16.0.3",
-    "got": "^12.5.3"
+    "got": "^12.5.3",
+    "pino": "^8.19.0"
   },
   "name": "switchbot-api",
   "version": "1.0.0",
