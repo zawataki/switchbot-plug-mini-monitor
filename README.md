@@ -28,6 +28,7 @@ This tool uses [SwitchBot API](https://github.com/OpenWonderLabs/SwitchBotAPI).
     SWITCHBOT_API_SECRET=your_secret
     TARGET_DEVICE_ID=your_device_id
     SCENE_ID_LAUNDRY_END_NOTIFICATION=your_scene_id_to_notify_laundry_end
+    SLACK_WEBHOOK=your_slack_incoming_webhook_to_notify_switchbot_api_error
     ```
 
 5. Run a script

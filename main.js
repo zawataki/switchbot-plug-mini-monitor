@@ -12,7 +12,7 @@ async function notifyLaundryEnd() {
 async function notifyApiError() {
   // Post a message to Slack because SwitchBot API may be down
   try {
-    await got.post("https://hooks.slack.com/services/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", {
+    await got.post(process.env.SLACK_WEBHOOK, {
       json: {
         text: 'SwitchBot API error occurred'
       }
