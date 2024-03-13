@@ -70,7 +70,8 @@ async function notifyApiError() {
         apiErrorCount = 0;
         alreadyNotifiedApiError = false;
       } catch (error) {
-        logger.error(error);
+        logger.error(error.message);
+        console.error(error);
 
         apiErrorCount++;
         if (apiErrorCount >= 3 && !alreadyNotifiedApiError) {
