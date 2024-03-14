@@ -17,12 +17,14 @@ const logger = pino({
 dotenv.config();
 
 async function notifyLaundryEnd() {
+  logger.info("Notify laundry end");
   await executeManualScene(process.env.SCENE_ID_LAUNDRY_END_NOTIFICATION);
 }
 
 async function notifyApiError() {
   // Post a message to Slack because SwitchBot API may be down
   try {
+    logger.info("Notify SwitchBot API error");
     await got.post(process.env.SLACK_WEBHOOK, {
       json: {
         text: 'SwitchBot API error occurred'
