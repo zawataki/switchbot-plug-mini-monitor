@@ -11,7 +11,11 @@ const logger = pino({
       return {level: label.toUpperCase()};
     },
   },
-  timestamp: pino.stdTimeFunctions.isoTime,
+  timestamp: () => {
+    let jstDateTimeStr = (new Date(Date.now() + 9 * 60 * 60 * 1000)).toISOString()
+      .replace(/Z$/, '+0900');
+    return `,"time":"${jstDateTimeStr}"`;
+  },
 });
 
 dotenv.config();
