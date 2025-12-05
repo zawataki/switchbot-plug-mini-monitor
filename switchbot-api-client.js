@@ -62,3 +62,14 @@ export async function executeManualScene(sceneId) {
     throw new Error("Failed to execute manual scene", {cause: error});
   }
 }
+
+export async function sendDeviceControlCommand(deviceId, command) {
+  try {
+    let apiOptions = generateApiOptions();
+    apiOptions.json = {command: command};
+    const response = await got.post(`${API_URL}/devices/${deviceId}/commands`, apiOptions);
+    return response.body;
+  } catch (error) {
+    throw new Error("Failed to send device control command", {cause: error});
+  }
+}
