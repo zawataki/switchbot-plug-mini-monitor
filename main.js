@@ -44,6 +44,7 @@ async function notifyApiError() {
 (async () => {
   try {
     const deviceIdOfWashingMachine = process.env.TARGET_DEVICE_ID;
+    const electricThreshold = process.env.ELECTRIC_THRESHOLD;
     const statusCheckIntervalMsec = 30 * 1000;
     let lastApiCallTimeMsec = 0;
     let apiErrorCount = 0;
@@ -66,9 +67,9 @@ async function notifyApiError() {
         }
 
         if (electricCurrentHistory.length == 3
-          && electricCurrentHistory[0] != 0
-          && electricCurrentHistory[1] == 0
-          && electricCurrentHistory[2] == 0) {
+          && electricCurrentHistory[0] > electricThreshold
+          && electricCurrentHistory[1] <= electricThreshold
+          && electricCurrentHistory[2] <= electricThreshold) {
 
           await notifyLaundryEnd();
         }
