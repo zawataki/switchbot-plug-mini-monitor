@@ -1,8 +1,9 @@
 import {scheduler} from 'node:timers/promises';
 import dotenv from 'dotenv';
-import {getDeviceStatus, executeManualScene} from './switchbot-api-client.js';
+import {getDeviceStatus} from './switchbot-api-client.js';
 import got from 'got';
 import pino from 'pino';
+import {WebClient as SlackWebClient} from '@slack/web-api';
 
 const logger = pino({
   level: process.env.LOG_LEVEL || 'info',
@@ -20,9 +21,74 @@ const logger = pino({
 
 dotenv.config();
 
+// Slack Web API クライアント
+const slackToken = process.env.SLACK_BOT_TOKEN;
+const slackChannel = process.env.SLACK_CHANNEL; // チャンネルID（例: C0123456789）
+const slack = slackToken ? new SlackWebClient(slackToken) : null;
+
+async function sendSlackMessage(text) {
+  if (slack) {
+    const res = await slack.chat.postMessage({
+      channel: slackChannel,
+      text,
+    });
+    return {ts: res.ts, channel: res.channel};
+  }
+  // Webhook fallback（リアクション確認は不可）
+  await got.post(process.env.SLACK_WEBHOOK, {json: {text}});
+  return null;
+}
+
+async function hasCheckReaction(channel, ts) {
+  if (!slack) return false; // Webhookのみの場合は確認不可
+  try {
+    const res = await slack.reactions.get({channel, timestamp: ts});
+    const reactions = res.message?.reactions || [];
+    return reactions.some(r => typeof r.name === 'string' && r.name.includes('check'));
+  } catch (error) {
+    // 権限不足や一時エラーの可能性、ログ出して false で継続
+    logger.warn({msg: 'Failed to fetch reactions', error: error?.message});
+    return false;
+  }
+}
+
 async function notifyLaundryEnd() {
   logger.info("Notify laundry end");
-  await executeManualScene(process.env.SCENE_ID_LAUNDRY_END_NOTIFICATION);
+  try {
+    // 1回目通知
+    const first = await sendSlackMessage('<@yuki> 洗濯が終わったよ。メッセージを確認したら:white_check_mark:をつけてね');
+
+    // リアクション確認できる場合のみ、定期的にリトライ
+    if (first && first.ts && first.channel) {
+      const checkIntervalMsec = 5 * 60 * 1000; // 5分おきにリトライ
+      let notifiedTs = first.ts;
+      let notifiedChannel = first.channel;
+
+      // タイムアウトまでリトライを繰り返す（リアクションがあればリトライ停止）
+      const timeoutMsec = 1 * 60 * 60 * 1000; // タイムアウトを1時間に設定
+      const start = Date.now();
+      while (true) {
+        await scheduler.wait(checkIntervalMsec);
+        const confirmed = await hasCheckReaction(notifiedChannel, notifiedTs);
+        if (confirmed) {
+          logger.info('Laundry end confirmed by check reaction');
+          break;
+        }
+        if (Date.now() - start > timeoutMsec) {
+          logger.warn('Laundry end reminder timed out without reaction');
+          break;
+        }
+        const reminder = await sendSlackMessage('まだ:white_check_mark:がついてないよ。確認したら最新のメッセージにつけてね');
+        if (reminder && reminder.ts && reminder.channel) {
+          // 最新メッセージに対してリアクション確認を続ける
+          notifiedTs = reminder.ts;
+          notifiedChannel = reminder.channel;
+        }
+      }
+    }
+  } catch (error) {
+    throw new Error("Failed to notify laundry end", {cause: error});
+  }
 }
 
 async function notifyApiError() {

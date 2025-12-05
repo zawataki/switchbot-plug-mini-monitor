@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "@slack/web-api": "^7.13.0",
     "dotenv": "^16.0.3",
     "got": "^12.5.3",
     "pino": "^8.19.0"
