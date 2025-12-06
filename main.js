@@ -78,7 +78,7 @@ async function notifyLaundryEnd() {
           logger.warn('Laundry end reminder timed out without reaction');
           break;
         }
-        const reminder = await sendSlackMessage('まだ:white_check_mark:がついてないよ。確認したら最新のメッセージにつけてね');
+        const reminder = await sendSlackMessage('<@yuki> まだ:white_check_mark:がついてないよ。確認したら最新のメッセージにつけてね');
         if (reminder && reminder.ts && reminder.channel) {
           // 最新メッセージに対してリアクション確認を続ける
           notifiedTs = reminder.ts;
