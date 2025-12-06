@@ -56,7 +56,17 @@ async function notifyLaundryEnd() {
   logger.info("Notify laundry end");
   try {
     // 1回目通知
-    const first = await sendSlackMessage('<@yuki> 洗濯が終わったよ。メッセージを確認したら:white_check_mark:をつけてね');
+    let mention;
+    if (process.env.SLACK_MENTION) {
+      if (["here", "channel", "everyone"].includes(process.env.SLACK_MENTION)) {
+        mention = `<!${process.env.SLACK_MENTION}> `;
+      } else {
+        mention = `<@${process.env.SLACK_MENTION}> `;
+      }
+    } else {
+      mention = '';
+    }
+    const first = await sendSlackMessage(`${mention}洗濯が終わったよ。メッセージを確認したら:white_check_mark:をつけてね`);
 
     // リアクション確認できる場合のみ、定期的にリトライ
     if (first && first.ts && first.channel) {
@@ -78,7 +88,7 @@ async function notifyLaundryEnd() {
           logger.warn('Laundry end reminder timed out without reaction');
           break;
         }
-        const reminder = await sendSlackMessage('<@yuki> まだ:white_check_mark:がついてないよ。確認したら最新のメッセージにつけてね');
+        const reminder = await sendSlackMessage(`${mention}まだ:white_check_mark:がついてないよ。確認したら最新のメッセージにつけてね`);
         if (reminder && reminder.ts && reminder.channel) {
           // 最新メッセージに対してリアクション確認を続ける
           notifiedTs = reminder.ts;
