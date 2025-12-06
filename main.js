@@ -90,10 +90,13 @@ async function notifyLaundryEnd() {
           logger.info('Laundry end confirmed by check reaction');
           break;
         }
+
         if (Date.now() - start > timeoutMsec) {
           logger.warn('Laundry end reminder timed out without reaction');
           break;
         }
+
+        logger.info("Notify laundry end (reminder)");
         const reminder = await sendSlackMessage(`${mention}まだ:white_check_mark:がついてないよ。確認したら最新のメッセージにつけてね`);
         if (reminder && reminder.ts && reminder.channel) {
           // 最新メッセージに対してリアクション確認を続ける
