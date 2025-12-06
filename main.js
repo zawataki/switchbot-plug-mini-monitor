@@ -70,12 +70,18 @@ async function notifyLaundryEnd() {
 
     // リアクション確認できる場合のみ、定期的にリトライ
     if (first && first.ts && first.channel) {
-      const checkIntervalMsec = 5 * 60 * 1000; // 5分おきにリトライ
+      const checkIntervalSec = process.env.SLACK_REMINDER_INTERVAL_SEC ?
+        parseInt(process.env.SLACK_REMINDER_INTERVAL_SEC, 10) :
+        300;
+      const checkIntervalMsec = checkIntervalSec * 1000;
       let notifiedTs = first.ts;
       let notifiedChannel = first.channel;
 
       // タイムアウトまでリトライを繰り返す（リアクションがあればリトライ停止）
-      const timeoutMsec = 1 * 60 * 60 * 1000; // タイムアウトを1時間に設定
+      const timeoutSec = process.env.SLACK_REMINDER_TIMEOUT_SEC ?
+        parseInt(process.env.SLACK_REMINDER_TIMEOUT_SEC, 10) :
+        1800;
+      const timeoutMsec = timeoutSec * 1000; // タイムアウトを設定
       const start = Date.now();
       while (true) {
         await scheduler.wait(checkIntervalMsec);
